@@ -1,4 +1,4 @@
-# meta_reflector module
+# Resilient meta_reflector
 import requests
 from collections import Counter
 
@@ -8,18 +8,19 @@ def run(_: str = None) -> dict:
             "https://core-builder-v-2-jamesrickstinso.replit.app/api/modules/memory_core/run",
             json={"payload": {"action": "retrieve"}}
         )
-        logs = response.json().get("results", [])
+        raw = response.json()
+        logs = raw.get("results", []) if isinstance(raw, dict) else []
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Failed to retrieve memory: {str(e)}"}
 
     if not logs:
-        return {"summary": "No memory logs found."}
+        return {"summary": "No memory entries available."}
 
-    # Analyze type distribution
-    types = [log['type'] for log in logs]
+    # Analyze distribution
+    types = [log.get('type', 'unknown') for log in logs]
     type_counts = Counter(types)
 
-    # Detect potential gaps
+    # Expected coverage
     expected = {"evolution", "decision", "insight", "event"}
     missing = list(expected - set(type_counts))
 
@@ -27,5 +28,5 @@ def run(_: str = None) -> dict:
         "log_count": len(logs),
         "type_distribution": dict(type_counts),
         "missing_types": missing,
-        "summary": f"Memory contains {len(logs)} entries. Missing categories: {', '.join(missing) if missing else 'none.'}"
+        "summary": f"{len(logs)} memory entries. Missing: {', '.join(missing) if missing else 'none'}"
     }
